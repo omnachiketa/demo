@@ -26,39 +26,50 @@ describe_db_cluster_snapshots = sys.argv[2]
 client = boto3.client('rds', aws_access_key_id=data['account_info']['ID'], aws_secret_access_key=data['account_info']['Secret'], region_name=data['account_info']['region_name'])
 
 def find_snapshot():
-    res = client.describe_db_snapshots()
-    res1 = client.describe_db_cluster_snapshots()
+    res = client.describe_db_snapshots(DBInstanceIdentifier=str(sys.argv[2]))
+    res1 = client.describe_db_cluster_snapshots(DBClusterIdentifier = str(sys.argv[2]))
     #print(res)
     #print(res1)
-    for snapshot in res['DBSnapshots']:
-        if (snapshot['DBInstanceIdentifier'] == sys.argv[2]):
-            if ((snapshot['SnapshotCreateTime'].date()) < retention_days):
-                print(snapshot['DBSnapshotIdentifier'], snapshot['SnapshotType'])
-                delete_snapshot(snapshot['DBSnapshotIdentifier'])
-                return
-            else:
-                pass
-                #print("couldn't find DB snapshot", sys.argv[2])
-    print("---------------------------------------")
-    for snapshot in res1['DBClusterSnapshots']:
-        if (snapshot['DBClusterIdentifier'] == str(sys.argv[2])):
-            if ((snapshot['SnapshotCreateTime'].date()) < retention_days):
-                print(snapshot['DBClusterSnapshotIdentifier'], snapshot['SnapshotType'])
-                delete_snapshot(snapshot['DBClusterSnapshotIdentifier'])
-            else:
-                pass
-                #print("couldn't find DB cluster snapshot", sys.argv[2])
-                
+    if len(res['DBSnapshots']) > 0:
+        for snapshot in res['DBSnapshots']:
+            if (snapshot['DBInstanceIdentifier'] == sys.argv[2]):
+                if ((snapshot['SnapshotCreateTime'].date()) < retention_days):
+                    print(snapshot['DBSnapshotIdentifier'], snapshot['SnapshotType'])
+                    delete_snapshot(snapshot['DBSnapshotIdentifier'])
+                else:
+                    pass
+                    #print("couldn't find DB snapshot", sys.argv[2])
+    else:
+        print("you have passed a DBClusterIdentifier or an Invalid entry")
+    if len(res1['DBClusterSnapshots']) > 0:
+        for snapshot in res1['DBClusterSnapshots']:
+            if (snapshot['DBClusterIdentifier'] == str(sys.argv[2])):
+                if ((snapshot['SnapshotCreateTime'].date()) < retention_days):
+                    print(snapshot['DBClusterSnapshotIdentifier'], snapshot['SnapshotType'])
+                    delete_snapshot(snapshot['DBClusterSnapshotIdentifier'])
+                else:
+                    pass
+                    #print("couldn't find DB cluster snapshot", sys.argv[2])
+    else:
+        print("you have passed a DBInstanceIdentifier or an Invalid entry")
 
+
+def check_output():
+    res = client.describe_db_snapshots(DBInstanceIdentifier=str(sys.argv[2]))
+    res1 = client.describe_db_cluster_snapshots()
+    print(res)
 def delete_snapshot(snapshot_id):
     print("deleteing snapshot:", snapshot_id)
-    #response = client.delete_db_snapshot(DBSnapshotIdentifier = snapshot_id)
+    if sys.argv[6] == "dryrun":
+        return
+    else:
+        print("deleting", snapshot_id)
+        #response = client.delete_db_snapshot(DBSnapshotIdentifier = snapshot_id)
 
 def main():
     try:
         find_snapshot()
     except:
         print("An error occurred while deleting the snapshot see the full logs")
-    
 if __name__ == "__main__":
     main()
